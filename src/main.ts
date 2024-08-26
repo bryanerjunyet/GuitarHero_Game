@@ -28,7 +28,6 @@ const Viewport = {
 
 const Constants = {
     TICK_RATE_MS: 500,
-    GRID_HEIGHT: 30,
     SONG_NAME: "RockinRobin",
 } as const;
 
@@ -39,7 +38,7 @@ const Note = {
 
 /** User input */
 
-type Key = "KeyS" | "KeyA" | "KeyD" | "KeyW";
+type Key = "KeyH" | "KeyJ" | "KeyK" | "KeyL";
 
 type Event = "keydown" | "keyup" | "keypress";
 
@@ -106,7 +105,7 @@ const createSvgElement = (
  * This is the function called on page load. Your main game loop
  * should be called here.
  */
-export function main(csv_contents: string) {
+export function main(csvContents: string, samples: { [key: string]: Tone.Sampler }) {
     // Canvas elements
     const svg = document.querySelector("#svgCanvas") as SVGGraphicsElement &
         HTMLElement;
@@ -214,11 +213,11 @@ if (typeof window !== "undefined") {
         baseUrl: "samples/",
     });
 
-    const start_game = (contents: string) => {
+    const startGame = (contents: string) => {
         document.body.addEventListener(
             "mousedown",
             function () {
-                main(contents);
+                main(contents, samples);
             },
             { once: true },
         );
@@ -231,12 +230,14 @@ if (typeof window !== "undefined") {
         for (const instrument in samples) {
             samples[instrument].toDestination();
             samples[instrument].release = 0.5;
-            fetch(`${baseUrl}/assets/${Constants.SONG_NAME}.csv`)
-                .then((response) => response.text())
-                .then((text) => start_game(text))
-                .catch((error) =>
-                    console.error("Error fetching the CSV file:", error),
-                );
         }
+
+        fetch(`${baseUrl}/assets/${Constants.SONG_NAME}.csv`)
+            .then((response) => response.text())
+            .then((text) => startGame(text))
+            .catch((error) =>
+                console.error("Error fetching the CSV file:", error),
+            );
+        
     });
 }
