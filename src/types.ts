@@ -1,64 +1,27 @@
-// export type Key = "H" | "J" | "K" | "L";
+export interface Note {
+    time: number; // Time when the note should be hit
+    lane: number; // Lane index (e.g., 0 for leftmost lane)
+    hit?: boolean; // Whether the note was hit
+}
 
-// export interface Note {
-//     time: number;
-//     key: Key;
-//     x: number;
-//     y: number;
-//     isActive: boolean;
-// }
-
-// export interface State {
-//     notes: Note[];
-//     score: number;
-//     gameEnd: boolean;
-// }
-
-// export type Key = "KeyH" | "KeyJ" | "KeyK" | "KeyL";
-
-// export type Note = {
-//     r: number;
-//     cx: string;
-//     cy: number;
-//     color: string;
-// };
-
-// export const Constants = {
-//     TICK_RATE_MS: 500,
-//     SONG_NAME: "RockinRobin",
-// } as const;
-
-// export type State = Readonly<{
-//     gameEnd: boolean;
-//     circles: Note[];
-// }>;
-
-export const Viewport = {
-    CANVAS_WIDTH: 200,
-    CANVAS_HEIGHT: 400,
-} as const;
-
-export const Constants = {
-    TICK_RATE_MS: 500,
-    SONG_NAME: "RockinRobin",
-} as const;
-
-export const Note = {
-    RADIUS: 0.07 * Viewport.CANVAS_WIDTH,
-    TAIL_WIDTH: 10,
-};
-
-export type State = Readonly<{
-    gameEnd: boolean;
-    notes: ReadonlyArray<{
-        x: number;
-        y: number;
-        column: number;
-        duration: number;
-    }>;
+export interface PlayerState {
     score: number;
+    streak: number;
     multiplier: number;
-    consecutiveHits: number;
-}>;
+    missedNotes: number;
+}
 
-export type Action = { type: "tick" } | { type: "keyPress"; column: number };
+export interface GameState {
+    notes: Note[];
+    player: PlayerState;
+    gameOver: boolean;
+    time: number;
+}
+
+// export type GameAction =
+//     | { type: "START_GAME" }
+//     | { type: "TICK"; payload: number }
+//     | { type: "HIT_NOTE"; payload: { lane: number; time: number } }
+//     | { type: "END_GAME" };
+
+export type Lane = 0 | 1 | 2 | 3; // Represents the lanes in the game

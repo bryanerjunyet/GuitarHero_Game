@@ -1,36 +1,24 @@
-// import { Key, Note } from "./types";
+import { Note } from "./types";
 
-// export function createNote(csvLine: string): Note {
-//     const [time, key] = csvLine.split(",");
-//     return {
-//         time: parseFloat(time),
-//         key: key as Key,
-//         x: 100, // Placeholder x-coordinate
-//         y: 0, // Initial y-coordinate
-//         isActive: true,
-//     };
-// }
+export const torusWrap = (value: number, min: number, max: number): number => {
+    return value < min ? max : value > max ? min : value;
+};
 
-// export const createSvgElement = (
-//     namespace: string | null,
-//     name: string,
-//     props: Record<string, string> = {},
-// ): SVGElement => {
-//     const elem = document.createElementNS(namespace, name) as SVGElement;
-//     Object.entries(props).forEach(([k, v]) => elem.setAttribute(k, v));
-//     return elem;
-// };
+export const calculateScore = (streak: number, multiplier: number): number => {
+    return 100 * multiplier * streak;
+};
 
-export type Key = "KeyH" | "KeyJ" | "KeyK" | "KeyL";
+export const generateNotes = (): Note[] => {
+    // Generates an array of notes with random time and lane values
+    return Array.from({ length: 100 }, () => ({
+        time: Math.random() * 60, // Notes spread over 60 seconds
+        lane: Math.floor(Math.random() * 4), // Four lanes
+    }));
+};
 
-export type Event = "keydown" | "keyup" | "keypress";
-
-export const createSvgElement = (
-    namespace: string | null,
-    name: string,
-    props: Record<string, string> = {},
-) => {
-    const elem = document.createElementNS(namespace, name) as SVGElement;
-    Object.entries(props).forEach(([k, v]) => elem.setAttribute(k, v));
-    return elem;
+export const updateMultiplier = (streak: number): number => {
+    if (streak < 10) return 1;
+    if (streak < 20) return 2;
+    if (streak < 30) return 3;
+    return 4;
 };

@@ -1,122 +1,65 @@
-// import { State, Note } from "./types";
+import { GameState, Note } from "./types";
+import { calculateScore, updateMultiplier } from "./util";
 
-// export const initialState: State = {
-//     notes: [],
-//     score: 0,
-//     gameEnd: false,
-// };
-
-// export function tick(state: State, elapsed: number): State {
-//     const updatedNotes = state.notes.map((note) => ({
-//         ...note,
-//         y: note.y + elapsed * 0.1, // Move notes down the screen
-//     }));
-
-//     const gameEnd = updatedNotes.some((note) => note.y > 500); // Arbitrary end condition
-
-//     return {
-//         ...state,
-//         notes: updatedNotes,
-//         gameEnd,
-//     };
-// }
-
-// export function updateScore(state: State, points: number) {
-//     state.score += points;
-// }
-
-// export function addNote(state: State, note: Note) {
-//     state.notes.push(note);
-// }
-
-// export function endGame(state: State) {
-//     console.log("Game Over!");
-//     state.gameEnd = true;
-// }
-
-// import { State } from "./types";
-
-// export const initialState: State = {
-//     gameEnd: false,
-//     circles: [],
-// };
-
-// export const tick = (s: State): State => {
-//     const newState = { ...s };
-//     // Implement the logic for moving the circles down the board
-//     newState.circles = s.circles.map((c) => ({ ...c, cy: c.cy + 10 }));
-//     newState.gameEnd = newState.circles.some((c) => c.cy > 400);
-//     return newState;
-// };
-
-import { State, Action, Note } from "./types";
-import { Viewport } from "./types";
-
-export const initialState: State = {
-    gameEnd: false,
+export const initialState: GameState = {
     notes: [],
-    score: 0,
-    multiplier: 1,
-    consecutiveHits: 0,
-};
-
-export const reduceState = (s: State, action: Action): State => {
-    switch (action.type) {
-        case "tick":
-            return tick(s);
-        case "keyPress":
-            return keyPress(s, action.column);
-        default:
-            return s;
-    }
-};
-
-const tick = (s: State): State => {
-    const movedNotes = s.notes.map((note) => ({
-        ...note,
-        y: note.y + Viewport.CANVAS_HEIGHT / 100, // Move notes down
-    }));
-
-    const activeNotes = movedNotes.filter(
-        (note) => note.y <= Viewport.CANVAS_HEIGHT,
-    );
-    const missedNotes = movedNotes.filter(
-        (note) => note.y > Viewport.CANVAS_HEIGHT,
-    );
-
-    return {
-        ...s,
-        notes: activeNotes,
-        score: s.score - missedNotes.length * 5, // Penalty for missed notes
-        consecutiveHits: 0,
+    player: {
+        score: 0,
+        streak: 0,
         multiplier: 1,
-    };
+        missedNotes: 0,
+    },
+    gameOver: false,
+    time: 0,
 };
 
-const keyPress = (s: State, column: number): State => {
-    const hitNote = s.notes.find(
-        (note) =>
-            note.column === column &&
-            Math.abs(note.y - Viewport.CANVAS_HEIGHT * 0.9) < 20, // Hit zone
-    );
-
-    if (hitNote) {
-        const newConsecutiveHits = s.consecutiveHits + 1;
-        const newMultiplier = Math.floor(newConsecutiveHits / 10) * 0.2 + 1;
-
-        return {
-            ...s,
-            notes: s.notes.filter((note) => note !== hitNote),
-            score: s.score + 10 * s.multiplier,
-            consecutiveHits: newConsecutiveHits,
-            multiplier: newMultiplier,
-        };
-    } else {
-        return {
-            ...s,
-            score: s.score - 5,
-            consecutiveHits: 0,
-            multiplier: 1,
-        };
+export const reduceState = (state: GameState, action: any): GameState => {
+    switch (action.type) {
+        case "ADD_NOTE":
+            return { ...state, notes: [...state.notes, action.payload] };
+        case "HIT_NOTE":
+            const noteIndex = state.notes.findIndex(
+                (note: Note) =>
+                    note.time === action.payload.time &&
+                    note.lane === action.payload.lane,
+            );
+            if (noteIndex >= 0 && !state.notes[noteIndex].hit) {
+                const streak = state.player.streak + 1;
+                const multiplier = updateMultiplier(streak);
+                return {
+                    ...state,
+                    notes: state.notes.map((note, index) =>
+                        index === noteIndex ? { ...note, hit: true } : note,
+                    ),
+                    player: {
+                        ...state.player,
+                        score:
+                            state.player.score +
+                            calculateScore(streak, multiplier),
+                        streak,
+                        multiplier,
+                    },
+                };
+            }
+            return state;
+        case "MISS_NOTE":
+            return {
+                ...state,
+                player: {
+                    ...state.player,
+                    missedNotes: state.player.missedNotes + 1,
+                    streak: 0, // Reset streak on missed note
+                    multiplier: 1, // Reset multiplier
+                },
+            };
+        case "TICK":
+            return {
+                ...state,
+                time: state.time + action.payload,
+            };
+        case "END_GAME":
+            return { ...state, gameOver: true };
+        default:
+            return state;
     }
 };
