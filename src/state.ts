@@ -55,7 +55,7 @@ export class CircleInfo implements Action {
     constructor(public readonly note: Note) {}
 
     createCircleInfo(note: Note) {
-        const column = this.note.velocity % 4;
+        const column = this.note.pitch % 4;
         if (column === 0) {
             return {
                 r: `${NoteConstants.RADIUS}`,
@@ -96,7 +96,7 @@ export class CircleInfo implements Action {
         if (this.note.user_played) {
             return {
                 ...s,
-                note: this.note,
+                note: undefined,
                 noteToPlay: undefined,
                 activeCircles: s.activeCircles.concat([
                     { ...circle, id: String(s.circleCount) },
@@ -153,18 +153,6 @@ export class PressedKey implements Action {
         const remainingCircles = s.activeCircles.filter(
             not(this.circleCollision),
         );
-
-        // let noteToPlay: Note | undefined;
-        // console.log("collidedCircles", collidedCircles);
-        // if (collidedCircles.length > 0) {
-        //     // Find the corresponding note for the collided circle
-        //     noteToPlay = s.notes.find(
-        //         (note) => note.start === Number(collidedCircles[0].id),
-        //     );
-        //     console.log(s.notes);
-        //     console.log("noteToPlay", noteToPlay);
-        //     console.log(Number(collidedCircles[0].id));
-        // }
 
         return {
             ...s,

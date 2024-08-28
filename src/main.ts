@@ -80,7 +80,7 @@ export function main(
             Tone.Frequency(note.pitch, "midi").toNote(),
             note.end - note.start,
             undefined,
-            note.velocity / 1000,
+            note.velocity,
         );
     };
 
@@ -100,10 +100,10 @@ export function main(
                 const processed: NoteType = {
                     user_played: user_played === "True",
                     instrument_name,
-                    velocity: Number(velocity),
-                    pitch: Number(pitch),
-                    start: Number(start),
-                    end: Number(end),
+                    velocity: parseInt(velocity) / 127,
+                    pitch: parseInt(pitch),
+                    start: parseFloat(start),
+                    end: parseFloat(end),
                 };
                 return of(processed).pipe(delay(processed.start * 1000));
             }),
@@ -129,11 +129,11 @@ export function main(
             // console.log("outside", s.note);
 
             // Play note when key is pressed on circle
-            // if (s.noteToPlay) {
-            //     console.log("Got play");
-            //     console.log("Here", s.noteToPlay);
-            //     playNote(s.noteToPlay);
-            // }
+            if (s.noteToPlay) {
+                console.log("Got play");
+                console.log("Here", s.noteToPlay);
+                playNote(s.noteToPlay);
+            }
 
             updateView(s, svg);
 
