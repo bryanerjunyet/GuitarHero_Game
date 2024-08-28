@@ -6,6 +6,8 @@ export const initialState: State = {
     activeCircles: [],
     expiredCircles: [],
     note: undefined,
+    noteToPlay: undefined,
+    notes: [],
     score: 0,
     // time: 0,
     // outputBy: "tick",
@@ -25,14 +27,22 @@ export class Tick implements Action {
         const activeCircles = s.activeCircles.filter(not(expired));
         return {
             ...s,
-            expiredCircles,
+            expiredCircles: expiredCircles,
             activeCircles: activeCircles.map((circle) =>
                 this.moveCircle(circle),
             ),
             note: undefined,
-            // time: this.time,
-            // outputBy: "tick",
+            noteToPlay: undefined,
         };
+        //     ...s,
+        //     expiredCircles: expiredCircles,
+        //     activeCircles: activeCircles.map((circle) =>
+        //         this.moveCircle(circle),
+        //     ),
+        //     note: undefined,
+        //     // time: this.time,
+        //     // outputBy: "tick",
+        // };
     }
 
     moveCircle = (circle: Circle): Circle => ({
@@ -86,17 +96,21 @@ export class CircleInfo implements Action {
         if (this.note.user_played) {
             return {
                 ...s,
-                note: undefined,
+                note: this.note,
+                noteToPlay: undefined,
                 activeCircles: s.activeCircles.concat([
                     { ...circle, id: String(s.circleCount) },
                 ]),
                 // outputBy: "circleinfo",
+                notes: [...s.notes, this.note],
                 circleCount: s.circleCount + 1,
             };
         } else {
             return {
                 ...s,
                 note: this.note,
+                noteToPlay: undefined,
+                notes: [...s.notes, this.note],
                 // outputBy: "circleinfo",
                 // circleCount: s.circleCount + 1,
             };
@@ -107,38 +121,23 @@ export class CircleInfo implements Action {
 export class PressedKey implements Action {
     constructor(public readonly e: KeyboardEvent) {}
 
-    apply(s: State): State {
-        return this.pressCircle(s);
-    }
-
     getStaticXandY(): [string, number] {
         const staticY = Constants.CIRCLE_CY;
         switch (this.e.code) {
             case "KeyH":
                 return [Constants.GREEN_CX, Number(staticY)];
             case "KeyJ":
+                console.log("J pressed");
                 return [Constants.RED_CX, Number(staticY)];
             case "KeyK":
                 return [Constants.BLUE_CX, Number(staticY)];
             case "KeyL":
                 return [Constants.YELLOW_CX, Number(staticY)];
             default:
+                console.log("what is this");
                 return ["0", 0];
         }
     }
-
-    pressCircle = (s: State): State => {
-        const collidedCircles = s.activeCircles.filter(this.circleCollision);
-        const remainingCircles = s.activeCircles.filter(
-            not(this.circleCollision),
-        );
-        return {
-            ...s,
-            score: s.score + collidedCircles.length,
-            activeCircles: remainingCircles,
-            expiredCircles: collidedCircles.concat(s.expiredCircles),
-        };
-    };
 
     circleCollision = (circle: Circle): boolean => {
         const [staticX, staticY] = this.getStaticXandY();
@@ -148,7 +147,66 @@ export class PressedKey implements Action {
         }
         return false;
     };
+
+    pressCircle = (s: State): State & { noteToPlay?: Note } => {
+        const collidedCircles = s.activeCircles.filter(this.circleCollision);
+        const remainingCircles = s.activeCircles.filter(
+            not(this.circleCollision),
+        );
+
+        // let noteToPlay: Note | undefined;
+        // console.log("collidedCircles", collidedCircles);
+        // if (collidedCircles.length > 0) {
+        //     // Find the corresponding note for the collided circle
+        //     noteToPlay = s.notes.find(
+        //         (note) => note.start === Number(collidedCircles[0].id),
+        //     );
+        //     console.log(s.notes);
+        //     console.log("noteToPlay", noteToPlay);
+        //     console.log(Number(collidedCircles[0].id));
+        // }
+
+        return {
+            ...s,
+            score: s.score + collidedCircles.length,
+            activeCircles: remainingCircles,
+            expiredCircles: collidedCircles.concat(s.expiredCircles),
+            // noteToPlay,
+        };
+    };
+
+    apply(s: State): State {
+        // const result = this.pressCircle(s);
+        // console.log("circle", circle);
+        return this.pressCircle(s);
+    }
 }
+
+// pressCircle = (s: State): State => {
+//     const collidedCircles = s.activeCircles.filter(this.circleCollision);
+//     const remainingCircles = s.activeCircles.filter(
+//         not(this.circleCollision),
+//     );
+//     return {
+//         ...s,
+//         score: s.score + collidedCircles.length,
+//         activeCircles: remainingCircles,
+//         expiredCircles: collidedCircles.concat(s.expiredCircles),
+//     };
+// };
+
+// getNoteFromCircle(s: State): Note | undefined {
+//     const [staticX, staticY] = this.getStaticXandY();
+//     const collidedCircle = s.activeCircles.find(
+//         (circle) =>
+//             circle.cx === staticX &&
+//             Math.abs(staticY - Number(circle.cy)) < NoteConstants.RADIUS,
+//     );
+//     if (collidedCircle) {
+//         return s.note;
+//     }
+//     return undefined;
+// }
 
 export const reduceState = (s: State, action: Action) => {
     return action.apply(s);

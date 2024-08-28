@@ -9,6 +9,8 @@ export type State = Readonly<{
     activeCircles: ReadonlyArray<Circle>;
     expiredCircles: ReadonlyArray<Circle>;
     note: Note | undefined;
+    noteToPlay: Note | undefined;
+    notes: ReadonlyArray<Note>;
     score: number;
     // time: number;
     // outputBy: string;

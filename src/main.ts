@@ -34,16 +34,48 @@ export function main(
     ) as HTMLElement;
 
     /** User input */
+
+    /**
+     * This function creates an observable stream that listens for keydown events
+     * and filters them based on the specified key code.
+     *
+     * @param keyCode
+     * @returns
+     */
     const fromKey = (keyCode: Key) =>
         fromEvent<KeyboardEvent>(document, "keydown").pipe(
             filter(({ code }) => code === keyCode),
         );
 
-    /** Determines the rate of time steps */
+    /**
+     * Determines the rate of time steps
+     * This creates an observable stream that emits values at regular intervals defined by TICK_RATE_MS.
+     */
     const tick$ = interval(Constants.TICK_RATE_MS);
 
-    const playNote = (s: State) => {
-        const note = s.note!;
+    // /**
+    //  * This function plays a note using the Tone.js library.
+    //  * It triggers a note based on the current state, using the instrument,
+    //  * pitch, duration, and velocity from the state.
+    //  * @param s
+    //  */
+    // const playNote = (s: State) => {
+    //     console.log(s);
+    //     const note = s.note!;
+    //     samples[note.instrument_name].triggerAttackRelease(
+    //         Tone.Frequency(note.pitch, "midi").toNote(),
+    //         note.end - note.start,
+    //         undefined,
+    //         note.velocity / 1000,
+    //     );
+    // };
+
+    /**
+     * This function plays a note using the Tone.js library.
+     * It triggers a note based on the provided Note object.
+     * @param note
+     */
+    const playNote = (note: NoteType) => {
         samples[note.instrument_name].triggerAttackRelease(
             Tone.Frequency(note.pitch, "midi").toNote(),
             note.end - note.start,
@@ -91,8 +123,17 @@ export function main(
         .pipe(scan((s: State, action) => action.apply(s), initialState))
         .subscribe((s: State) => {
             if (s.note) {
-                playNote(s);
+                console.log(s.note);
+                playNote(s.note);
             }
+            // console.log("outside", s.note);
+
+            // Play note when key is pressed on circle
+            // if (s.noteToPlay) {
+            //     console.log("Got play");
+            //     console.log("Here", s.noteToPlay);
+            //     playNote(s.noteToPlay);
+            // }
 
             updateView(s, svg);
 
@@ -101,6 +142,14 @@ export function main(
             } else {
                 hide(gameover);
             }
+
+            // // Play the note if it exists in the state
+            // if (s.note) {
+            //     playNote({
+            //         ...s,
+            //         note: s.note,
+            //     });
+            // }
         });
 }
 
