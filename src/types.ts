@@ -15,9 +15,10 @@ type State = Readonly<{
     playNotes: ReadonlyArray<Note>;
     circleCount: number;
     score: number;
-
-    output: string;
-    time: number;
+    multiplier: number;
+    combo: number;
+    miss: number;
+    wrongNote: boolean;
 }>;
 
 type Note = Readonly<{
@@ -30,7 +31,7 @@ type Note = Readonly<{
 }>;
 
 type Circle = Readonly<{
-    id: string;
+    id: number;
     r: string;
     cx: string;
     cy: string;

@@ -1,6 +1,6 @@
 import { Key, Event, Action, State, Note, Circle } from "./types";
-import { not } from "./util";
-import { Constants } from "./main";
+import { getRandomNote, not, playRandom } from "./util";
+import { Constants } from "./util";
 
 /** State processing */
 
@@ -11,9 +11,10 @@ export const initialState: State = {
     playNotes: [],
     circleCount: 0,
     score: 0,
-
-    output: "",
-    time: 0,
+    multiplier: 1,
+    combo: 0,
+    miss: 0,
+    wrongNote: false,
 } as const;
 
 class Tick implements Action {
@@ -25,14 +26,26 @@ class Tick implements Action {
         const renderCircles = s.renderCircles
             .filter(not(expired))
             .map(this.moveCircle);
+        const missCircles = removeCircles.length;
+        const gameOver = !!renderCircles.find(
+            (circle) => circle.id === Infinity,
+        );
+        // console.log("Game Over", gameOver);
+        // console.log("Miss", miss);
+        // console.log("MissCircles", missCircles);
+        // const gameOver = s.renderCircles.filter(expired).length === 0;
+        // const trueCombo = renderCircles === removeCircles;
+
+        // const gameOver = (circle: Circle) => circle.id === "ENDNOTE"
+        // ) && (s.renderCircles.filter(expired).length >= 30);
         return {
             ...s,
+            gameEnd: gameOver,
             renderCircles,
             removeCircles,
             playNotes: [],
-
-            output: "Tick",
-            time: this.tick,
+            miss: s.miss + missCircles,
+            combo: missCircles > 0 ? 0 : s.combo,
         };
     }
 
@@ -45,7 +58,10 @@ class Tick implements Action {
 }
 
 class ProcessNote implements Action {
-    constructor(public readonly note: Note) {}
+    constructor(
+        public readonly note: Note,
+        // public readonly lastNote: boolean,
+    ) {}
 
     circleProperties(note: Note) {
         const position = Number(note.pitch) % 4;
@@ -66,12 +82,15 @@ class ProcessNote implements Action {
             return {
                 ...s,
                 playNotes: [this.note],
-
-                output: "ProcessNote",
             };
         } else {
+            // console.log("Last Note", this.lastNote);
+            // if (this.lastNote) {
+            //     console.log("Last", s.renderCircles);
+            // }
             const circle = {
-                id: "circle" + String(s.circleCount),
+                // id: this.lastNote ? Infinity : Number(s.circleCount),
+                id: Number(s.circleCount),
                 r: Constants.RADIUS,
                 cx,
                 cy: "0",
@@ -84,8 +103,6 @@ class ProcessNote implements Action {
                 renderCircles: s.renderCircles.concat(circle),
                 circleCount: s.circleCount + 1,
                 playNotes: [],
-
-                output: "ProcessNote",
             };
         }
     }
@@ -97,14 +114,41 @@ class PressKey implements Action {
     apply(s: State): State {
         const collidedCircles = s.renderCircles.filter(this.circleCollision);
         const renderCircles = s.renderCircles.filter(not(this.circleCollision));
-        const playNotes = collidedCircles.map((circle) => circle.note);
-        return {
-            ...s,
-            renderCircles,
-            removeCircles: collidedCircles,
-            playNotes,
-            score: s.score + collidedCircles.length,
-        };
+
+        console.log("Render Circles", renderCircles);
+        if (collidedCircles.length === 0) {
+            console.log("No collision detected", collidedCircles);
+            // No collision detected, generate a random note
+
+            // const randomNote = getRandomNote();
+            // playRandom(randomNote, Constants.SAMPLES);
+            // console.log("Random Note", randomNote);
+            return {
+                ...s,
+                removeCircles: [],
+                score: s.score,
+                multiplier: 1,
+                // combo: 0,
+                wrongNote: true,
+            };
+        } else {
+            console.log("Collision detected", collidedCircles);
+            const playNotes = collidedCircles.map((circle) => circle.note);
+            const newCombo = s.combo + collidedCircles.length;
+            const newMultiplier = 1 + Math.floor(newCombo / 10) * 0.2;
+            return {
+                ...s,
+                renderCircles,
+                removeCircles: collidedCircles,
+                playNotes,
+                score: Math.round(
+                    s.score + collidedCircles.length * newMultiplier,
+                ),
+                multiplier: newMultiplier,
+                combo: newCombo,
+                wrongNote: false,
+            };
+        }
     }
 
     getStaticXandY(event: KeyboardEvent): [string, string] {
