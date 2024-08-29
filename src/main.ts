@@ -70,19 +70,19 @@ export function main(
     //     );
     // };
 
-    // /**
-    //  * This function plays a note using the Tone.js library.
-    //  * It triggers a note based on the provided Note object.
-    //  * @param note
-    //  */
-    // const playNote = (note: NoteType) => {
-    //     samples[note.instrument_name].triggerAttackRelease(
-    //         Tone.Frequency(note.pitch, "midi").toNote(),
-    //         note.end - note.start,
-    //         undefined,
-    //         note.velocity,
-    //     );
-    // };
+    /**
+     * This function plays a note using the Tone.js library.
+     * It triggers a note based on the provided Note object.
+     * @param note
+     */
+    const playNote = (note: NoteType) => {
+        samples[note.instrument_name].triggerAttackRelease(
+            Tone.Frequency(note.pitch, "midi").toNote(),
+            note.end - note.start,
+            undefined,
+            note.velocity,
+        );
+    };
 
     const process = (csvContents: string) => {
         const lines = csvContents.split("\n");
@@ -110,18 +110,10 @@ export function main(
         );
     };
 
-    const keyH$ = fromKey("KeyH").pipe(
-        map((e) => new PressedKey(40, samples, e)),
-    );
-    const keyJ$ = fromKey("KeyJ").pipe(
-        map((e) => new PressedKey(80, samples, e)),
-    );
-    const keyK$ = fromKey("KeyK").pipe(
-        map((e) => new PressedKey(120, samples, e)),
-    );
-    const keyL$ = fromKey("KeyL").pipe(
-        map((e) => new PressedKey(160, samples, e)),
-    );
+    const keyH$ = fromKey("KeyH").pipe(map((e) => new PressedKey(e)));
+    const keyJ$ = fromKey("KeyJ").pipe(map((e) => new PressedKey(e)));
+    const keyK$ = fromKey("KeyK").pipe(map((e) => new PressedKey(e)));
+    const keyL$ = fromKey("KeyL").pipe(map((e) => new PressedKey(e)));
     const ticked$ = tick$.pipe(map((value) => new Tick(value)));
     const notes$ = process(csvContents).pipe(
         map((note: NoteType) => new CircleInfo(note)),
@@ -130,20 +122,18 @@ export function main(
     const source$ = merge(ticked$, notes$, keyH$, keyJ$, keyK$, keyL$)
         .pipe(scan((s: State, action) => action.apply(s), initialState))
         .subscribe((s: State) => {
-            // console.log("outside", s.note);
-            // if (s.note) {
-            //     console.log(s.note);
-            //     playNote(s.note);
-            // }
-
+            if (s.note) {
+                console.log(s.note);
+                playNote(s.note);
+            }
             // console.log("outside", s.note);
 
-            // // Play note when key is pressed on circle
-            // if (s.noteToPlay) {
-            //     console.log("Got play");
-            //     console.log("Here", s.noteToPlay);
-            //     playNote(s.noteToPlay);
-            // }
+            // Play note when key is pressed on circle
+            if (s.noteToPlay) {
+                console.log("Got play");
+                console.log("Here", s.noteToPlay);
+                playNote(s.noteToPlay);
+            }
 
             updateView(s, svg);
 
