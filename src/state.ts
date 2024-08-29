@@ -1,267 +1,134 @@
-import { State, Action, Circle, Note } from "./types";
-import { Constants, not, Note as NoteConstants } from "./util";
+import { Key, Event, Action, State, Note, Circle } from "./types";
+import { not } from "./util";
+import { Constants } from "./main";
+
+/** State processing */
 
 export const initialState: State = {
     gameEnd: false,
-    activeCircles: [],
-    expiredCircles: [],
-    note: undefined,
-    noteToPlay: undefined,
-    notes: [],
-    score: 0,
-    // time: 0,
-    // outputBy: "tick",
+    renderCircles: [],
+    removeCircles: [],
+    playNotes: [],
     circleCount: 0,
-    // h: false,
-    // j: false,
-    // k: false,
-    // l: false,
+    score: 0,
+
+    output: "",
+    time: 0,
 } as const;
 
-export class Tick implements Action {
-    constructor(public readonly time: number) {}
+class Tick implements Action {
+    constructor(public readonly tick: number) {}
 
     apply(s: State): State {
         const expired = (circle: Circle) => Number(circle.cy) > 400;
-        const expiredCircles = s.activeCircles.filter(expired);
-        const activeCircles = s.activeCircles.filter(not(expired));
+        const removeCircles = s.renderCircles.filter(expired);
+        const renderCircles = s.renderCircles
+            .filter(not(expired))
+            .map(this.moveCircle);
         return {
             ...s,
-            expiredCircles: expiredCircles,
-            activeCircles: activeCircles.map((circle) =>
-                this.moveCircle(circle),
-            ),
-            note: undefined,
-            noteToPlay: undefined,
+            renderCircles,
+            removeCircles,
+            playNotes: [],
+
+            output: "Tick",
+            time: this.tick,
         };
-        //     ...s,
-        //     expiredCircles: expiredCircles,
-        //     activeCircles: activeCircles.map((circle) =>
-        //         this.moveCircle(circle),
-        //     ),
-        //     note: undefined,
-        //     // time: this.time,
-        //     // outputBy: "tick",
-        // };
     }
 
-    moveCircle = (circle: Circle): Circle => ({
-        ...circle,
-        cy: String(Number(circle.cy) + 2),
-    });
+    moveCircle(circle: Circle) {
+        return {
+            ...circle,
+            cy: String(Number(circle.cy) + 2),
+        };
+    }
 }
 
-export class CircleInfo implements Action {
+class ProcessNote implements Action {
     constructor(public readonly note: Note) {}
 
-    createCircleInfo(note: Note) {
-        const column = this.note.pitch % 4;
-        if (column === 0) {
-            return {
-                r: `${NoteConstants.RADIUS}`,
-                cx: "20%",
-                cy: "0",
-                style: "fill: green",
-                class: "shadow",
-            };
-        } else if (column === 1) {
-            return {
-                r: `${NoteConstants.RADIUS}`,
-                cx: "40%",
-                cy: "0",
-                style: "fill: red",
-                class: "shadow",
-            };
-        } else if (column === 2) {
-            return {
-                r: `${NoteConstants.RADIUS}`,
-                cx: "60%",
-                cy: "0",
-                style: "fill: blue",
-                class: "shadow",
-            };
+    circleProperties(note: Note) {
+        const position = Number(note.pitch) % 4;
+        if (position === 0) {
+            return Constants.GREEN_CX;
+        } else if (position === 1) {
+            return Constants.RED_CX;
+        } else if (position === 2) {
+            return Constants.BLUE_CX;
         } else {
-            return {
-                r: `${NoteConstants.RADIUS}`,
-                cx: "80%",
-                cy: "0",
-                style: "fill: yellow",
-                class: "shadow",
-            };
+            return Constants.YELLOW_CX;
         }
     }
 
     apply(s: State): State {
-        const circle = this.createCircleInfo(this.note);
-        if (this.note.user_played) {
+        const [cx, style] = this.circleProperties(this.note);
+        if (!this.note.user_played) {
             return {
                 ...s,
-                note: undefined,
-                noteToPlay: undefined,
-                activeCircles: s.activeCircles.concat([
-                    { ...circle, id: String(s.circleCount) },
-                ]),
-                // outputBy: "circleinfo",
-                notes: [...s.notes, this.note],
-                circleCount: s.circleCount + 1,
+                playNotes: [this.note],
+
+                output: "ProcessNote",
             };
         } else {
+            const circle = {
+                id: "circle" + String(s.circleCount),
+                r: Constants.RADIUS,
+                cx,
+                cy: "0",
+                style,
+                class: Constants.CIRCLE_CLASS,
+                note: this.note,
+            };
             return {
                 ...s,
-                note: this.note,
-                noteToPlay: undefined,
-                notes: [...s.notes, this.note],
-                // outputBy: "circleinfo",
-                // circleCount: s.circleCount + 1,
+                renderCircles: s.renderCircles.concat(circle),
+                circleCount: s.circleCount + 1,
+                playNotes: [],
+
+                output: "ProcessNote",
             };
         }
     }
 }
 
-export class PressedKey implements Action {
-    constructor(public readonly e: KeyboardEvent) {}
+class PressKey implements Action {
+    constructor(public readonly event: KeyboardEvent) {}
 
-    getStaticXandY(): [string, number] {
-        const staticY = Constants.CIRCLE_CY;
-        switch (this.e.code) {
-            case "KeyH":
-                return [Constants.GREEN_CX, Number(staticY)];
-            case "KeyJ":
-                console.log("J pressed");
-                return [Constants.RED_CX, Number(staticY)];
-            case "KeyK":
-                return [Constants.BLUE_CX, Number(staticY)];
-            case "KeyL":
-                return [Constants.YELLOW_CX, Number(staticY)];
-            default:
-                console.log("what is this");
-                return ["0", 0];
+    apply(s: State): State {
+        const collidedCircles = s.renderCircles.filter(this.circleCollision);
+        const renderCircles = s.renderCircles.filter(not(this.circleCollision));
+        const playNotes = collidedCircles.map((circle) => circle.note);
+        return {
+            ...s,
+            renderCircles,
+            removeCircles: collidedCircles,
+            playNotes,
+            score: s.score + collidedCircles.length,
+        };
+    }
+
+    getStaticXandY(event: KeyboardEvent): [string, string] {
+        const staticY = Constants.CY;
+        if (event.code === "KeyH") {
+            return [Constants.GREEN_CX[0], staticY];
+        } else if (event.code === "KeyJ") {
+            return [Constants.RED_CX[0], staticY];
+        } else if (event.code === "KeyK") {
+            return [Constants.BLUE_CX[0], staticY];
+        } else {
+            return [Constants.YELLOW_CX[0], staticY];
         }
     }
 
     circleCollision = (circle: Circle): boolean => {
-        const [staticX, staticY] = this.getStaticXandY();
+        const [staticX, staticY] = this.getStaticXandY(this.event);
         if (staticX === circle.cx) {
-            const yDistance = staticY - Number(circle.cy);
-            return Math.abs(yDistance) < NoteConstants.RADIUS;
+            const distanceY = Number(staticY) - Number(circle.cy);
+            return Math.abs(distanceY) < Number(Constants.RADIUS);
+        } else {
+            return false;
         }
-        return false;
     };
-
-    pressCircle = (s: State): State & { noteToPlay?: Note } => {
-        const collidedCircles = s.activeCircles.filter(this.circleCollision);
-        const remainingCircles = s.activeCircles.filter(
-            not(this.circleCollision),
-        );
-
-        return {
-            ...s,
-            score: s.score + collidedCircles.length,
-            activeCircles: remainingCircles,
-            expiredCircles: collidedCircles.concat(s.expiredCircles),
-            // noteToPlay,
-        };
-    };
-
-    apply(s: State): State {
-        // const result = this.pressCircle(s);
-        // console.log("circle", circle);
-        return this.pressCircle(s);
-    }
 }
 
-// pressCircle = (s: State): State => {
-//     const collidedCircles = s.activeCircles.filter(this.circleCollision);
-//     const remainingCircles = s.activeCircles.filter(
-//         not(this.circleCollision),
-//     );
-//     return {
-//         ...s,
-//         score: s.score + collidedCircles.length,
-//         activeCircles: remainingCircles,
-//         expiredCircles: collidedCircles.concat(s.expiredCircles),
-//     };
-// };
-
-// getNoteFromCircle(s: State): Note | undefined {
-//     const [staticX, staticY] = this.getStaticXandY();
-//     const collidedCircle = s.activeCircles.find(
-//         (circle) =>
-//             circle.cx === staticX &&
-//             Math.abs(staticY - Number(circle.cy)) < NoteConstants.RADIUS,
-//     );
-//     if (collidedCircle) {
-//         return s.note;
-//     }
-//     return undefined;
-// }
-
-export const reduceState = (s: State, action: Action) => {
-    return action.apply(s);
-};
-
-// import { GameState, Note } from "./types";
-// import { calculateScore, updateMultiplier } from "./util";
-
-// export const initialState: GameState = {
-//     notes: [],
-//     player: {
-//         score: 0,
-//         streak: 0,
-//         multiplier: 1,
-//         missedNotes: 0,
-//     },
-//     gameOver: false,
-//     time: 0,
-// };
-
-// export const reduceState = (state: GameState, action: any): GameState => {
-//     switch (action.type) {
-//         case "ADD_NOTE":
-//             return { ...state, notes: [...state.notes, action.payload] };
-//         case "HIT_NOTE":
-//             const noteIndex = state.notes.findIndex(
-//                 (note: Note) =>
-//                     note.time === action.payload.time &&
-//                     note.lane === action.payload.lane,
-//             );
-//             if (noteIndex >= 0 && !state.notes[noteIndex].hit) {
-//                 const streak = state.player.streak + 1;
-//                 const multiplier = updateMultiplier(streak);
-//                 return {
-//                     ...state,
-//                     notes: state.notes.map((note, index) =>
-//                         index === noteIndex ? { ...note, hit: true } : note,
-//                     ),
-//                     player: {
-//                         ...state.player,
-//                         score:
-//                             state.player.score +
-//                             calculateScore(streak, multiplier),
-//                         streak,
-//                         multiplier,
-//                     },
-//                 };
-//             }
-//             return state;
-//         case "MISS_NOTE":
-//             return {
-//                 ...state,
-//                 player: {
-//                     ...state.player,
-//                     missedNotes: state.player.missedNotes + 1,
-//                     streak: 0, // Reset streak on missed note
-//                     multiplier: 1, // Reset multiplier
-//                 },
-//             };
-//         case "TICK":
-//             return {
-//                 ...state,
-//                 time: state.time + action.payload,
-//             };
-//         case "END_GAME":
-//             return { ...state, gameOver: true };
-//         default:
-//             return state;
-//     }
-// };
+export { Tick, ProcessNote, PressKey };
