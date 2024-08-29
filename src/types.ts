@@ -4,6 +4,27 @@ export type Key = "KeyH" | "KeyJ" | "KeyK" | "KeyL";
 
 export type Event = "keydown" | "keyup" | "keypress";
 
+// Convert CircleNote to Circle
+export const toCircle = (circleNote: CircleNote): Circle => ({
+    id: circleNote.id,
+    r: circleNote.r,
+    cx: circleNote.cx,
+    cy: circleNote.cy,
+    style: circleNote.style,
+    class: circleNote.class,
+});
+
+// Convert Circle to CircleNote (requires a Note object for additional properties)
+export const toCircleNote = (circle: Circle, note: Note): CircleNote => ({
+    ...circle,
+    user_played: note.user_played,
+    instrument_name: note.instrument_name,
+    velocity: note.velocity,
+    pitch: note.pitch,
+    start: note.start,
+    end: note.end,
+});
+
 export type State = Readonly<{
     gameEnd: boolean;
     activeCircles: ReadonlyArray<Circle>;
@@ -34,8 +55,23 @@ export type Note = Readonly<{
 export type Circle = Readonly<{
     id: string;
     r: string;
-    cx: string;
-    cy: string;
+    cx: number;
+    cy: number;
+    style: string;
+    class: string;
+}>;
+
+export type CircleNote = Readonly<{
+    user_played: boolean;
+    instrument_name: string;
+    velocity: number;
+    pitch: number;
+    start: number;
+    end: number;
+    id: string;
+    r: string;
+    cx: number;
+    cy: number;
     style: string;
     class: string;
 }>;

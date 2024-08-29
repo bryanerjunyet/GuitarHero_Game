@@ -7,10 +7,10 @@ export const Viewport = {
 
 export const Constants = {
     TICK_RATE_MS: 10,
-    GREEN_CX: "20%",
-    RED_CX: "40%",
-    BLUE_CX: "60%",
-    YELLOW_CX: "80%",
+    GREEN_CX: 40,
+    RED_CX: 80,
+    BLUE_CX: 120,
+    YELLOW_CX: 160,
     CIRCLE_CY: 350,
     SONG_NAME: "RockinRobin",
 } as const;
