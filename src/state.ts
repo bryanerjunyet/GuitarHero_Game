@@ -27,9 +27,9 @@ class Tick implements Action {
             .filter(not(expired))
             .map(this.moveCircle);
         const missCircles = removeCircles.length;
-        const gameOver = !!renderCircles.find(
-            (circle) => circle.id === Infinity,
-        );
+        // const gameOver = !!renderCircles.find(
+        //     (circle) => circle.id === Infinity,
+        // );
         // console.log("Game Over", gameOver);
         // console.log("Miss", miss);
         // console.log("MissCircles", missCircles);
@@ -40,12 +40,13 @@ class Tick implements Action {
         // ) && (s.renderCircles.filter(expired).length >= 30);
         return {
             ...s,
-            gameEnd: gameOver,
+            // gameEnd: gameOver,
             renderCircles,
             removeCircles,
             playNotes: [],
             miss: s.miss + missCircles,
             combo: missCircles > 0 ? 0 : s.combo,
+            wrongNote: false,
         };
     }
 
@@ -146,7 +147,7 @@ class PressKey implements Action {
                 ),
                 multiplier: newMultiplier,
                 combo: newCombo,
-                wrongNote: false,
+                // wrongNote: false,
             };
         }
     }
@@ -175,4 +176,13 @@ class PressKey implements Action {
     };
 }
 
-export { Tick, ProcessNote, PressKey };
+class End implements Action {
+    apply(s: State): State {
+        return {
+            ...s,
+            gameEnd: true,
+        };
+    }
+}
+
+export { Tick, ProcessNote, PressKey, End };

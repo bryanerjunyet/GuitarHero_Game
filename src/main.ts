@@ -15,12 +15,20 @@
 import "./style.css";
 
 import { fromEvent, interval, merge, from, of } from "rxjs";
-import { map, filter, scan, skip, mergeMap, delay } from "rxjs/operators";
+import {
+    map,
+    filter,
+    scan,
+    skip,
+    mergeMap,
+    delay,
+    endWith,
+} from "rxjs/operators";
 import * as Tone from "tone";
 import { SampleLibrary } from "./tonejs-instruments";
 
 import { Key, Event, State, Note, Circle } from "./types";
-import { initialState, Tick, ProcessNote, PressKey } from "./state";
+import { initialState, Tick, ProcessNote, PressKey, End } from "./state";
 import { Constants, reduceState } from "./util";
 import { updateView } from "./view";
 
@@ -116,6 +124,7 @@ export function main(
 
     const notes$ = readCSV(csvContents).pipe(
         map((note) => new ProcessNote(note)),
+        endWith(new End()),
     );
 
     const keyH$ = fromKey("KeyH").pipe(map((event) => new PressKey(event)));

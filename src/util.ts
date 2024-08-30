@@ -11,7 +11,7 @@ const Viewport = {
 
 const Constants = {
     TICK_RATE_MS: 10,
-    SONG_NAME: "RockinRobin",
+    SONG_NAME: "Liebestraum",
     SEED: 123,
 
     RADIUS: String(0.07 * Viewport.CANVAS_WIDTH),

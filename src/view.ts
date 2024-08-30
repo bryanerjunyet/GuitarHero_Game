@@ -1,4 +1,4 @@
-import { map, timer } from "rxjs";
+import { fromEvent, map, timer } from "rxjs";
 import { Circle, Note, State } from "./types";
 import { getRandomNote, playRandom, Viewport } from "./util";
 import * as Tone from "tone";
@@ -13,6 +13,7 @@ const updateView = (s: State, samples: { [key: string]: Tone.Sampler }) => {
     const gameover = document.querySelector("#gameOver") as SVGGraphicsElement &
         HTMLElement;
     const container = document.querySelector("#main") as HTMLElement;
+    const resetButton = document.getElementById("resetButton")!;
 
     svg.setAttribute("height", `${Viewport.CANVAS_HEIGHT}`);
     svg.setAttribute("width", `${Viewport.CANVAS_WIDTH}`);
@@ -111,6 +112,12 @@ const updateView = (s: State, samples: { [key: string]: Tone.Sampler }) => {
         });
     };
 
+    // const resetCanvas = () => {
+    //     svg.querySelectorAll("[class=shadow]").forEach((note) =>
+    //         svg.removeChild(note),
+    //     );
+    // };
+
     // const miss = (renderCircles: ReadonlyArray<Circle>) => {
     //     const miss = renderCircles.filter(
     //         (circle) => Number(circle.cy) === Viewport.CANVAS_HEIGHT,
@@ -133,18 +140,18 @@ const updateView = (s: State, samples: { [key: string]: Tone.Sampler }) => {
     // console.log("Wrong before", s.wrongNote);
     if (s.wrongNote) {
         playRandom(getRandomNote(), samples);
-
-        console.log("Wrong inside", s);
-
-        // Use RxJS timer to reset the wrongPress state after a delay
-        // timer(500).pipe(
-        // map(() => {
-        // Reset the wrongPress state after 500ms
-        s = {
-            ...s,
-            wrongNote: false,
-        };
     }
+    // console.log("Wrong inside", s);
+
+    // Use RxJS timer to reset the wrongPress state after a delay
+    // timer(500).pipe(
+    // map(() => {
+    // Reset the wrongPress state after 500ms
+    // s = {
+    //     ...s,
+    //     wrongNote: false,
+    // };
+    // }
     // console.log("Wrong after", s);
     // console.log("Wrong after", s.wrongNote);
 
@@ -152,6 +159,17 @@ const updateView = (s: State, samples: { [key: string]: Tone.Sampler }) => {
     play(s.playNotes);
     remove(s.removeCircles);
 
+    // const reset = fromEvent<MouseEvent>(resetButton, "click");
+    // reset.subscribe(() => {
+    //     //unsubscribe current dot observable
+    //     source$.unsubscribe();
+    //     //reset dots on canvas
+    //     resetCanvas();
+    //     //reset approximation result
+    //     resultInPage.textContent = String(0);
+    //     //restart pi approximation
+    //     piApproximation();
+    // });
     // ).subscribe();
     // } else {
     //     render(s.renderCircles, svg);
@@ -162,15 +180,7 @@ const updateView = (s: State, samples: { [key: string]: Tone.Sampler }) => {
     multiplier.textContent = String(s.multiplier);
     scoreText.textContent = String(s.score);
     missText.textContent = String(s.miss);
-
-    // missText.textContent = String(s.miss + missing);
-    // console.log("Missing", s.miss);
-
-    if (s.gameEnd) {
-        show(gameover);
-    } else {
-        hide(gameover);
-    }
+    s.gameEnd && s.renderCircles.length === 0 ? show(gameover) : hide(gameover);
 };
 
 export { updateView };
