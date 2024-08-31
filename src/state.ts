@@ -1,11 +1,12 @@
 import { Key, Event, Action, State, Note, Circle } from "./types";
-import { getRandomNote, not, playRandom } from "./util";
+import { generateRandomNote, getRandomNote, not, playRandom } from "./util";
 import { Constants } from "./util";
 
 /** State processing */
 
 export const initialState: State = {
     gameEnd: false,
+    time: 0,
     renderCircles: [],
     removeCircles: [],
     playNotes: [],
@@ -21,32 +22,23 @@ class Tick implements Action {
     constructor(public readonly tick: number) {}
 
     apply(s: State): State {
+        console.log("Tick", this);
         const expired = (circle: Circle) => Number(circle.cy) > 400;
         const removeCircles = s.renderCircles.filter(expired);
         const renderCircles = s.renderCircles
             .filter(not(expired))
             .map(this.moveCircle);
         const missCircles = removeCircles.length;
-        // const gameOver = !!renderCircles.find(
-        //     (circle) => circle.id === Infinity,
-        // );
-        // console.log("Game Over", gameOver);
-        // console.log("Miss", miss);
-        // console.log("MissCircles", missCircles);
-        // const gameOver = s.renderCircles.filter(expired).length === 0;
-        // const trueCombo = renderCircles === removeCircles;
-
-        // const gameOver = (circle: Circle) => circle.id === "ENDNOTE"
-        // ) && (s.renderCircles.filter(expired).length >= 30);
         return {
             ...s,
-            // gameEnd: gameOver,
+            time: this.tick,
             renderCircles,
             removeCircles,
             playNotes: [],
             miss: s.miss + missCircles,
+            multiplier: missCircles > 0 ? 1 : s.multiplier,
             combo: missCircles > 0 ? 0 : s.combo,
-            wrongNote: false,
+            wrongNote: missCircles > 0 ? true : false,
         };
     }
 
@@ -59,10 +51,7 @@ class Tick implements Action {
 }
 
 class ProcessNote implements Action {
-    constructor(
-        public readonly note: Note,
-        // public readonly lastNote: boolean,
-    ) {}
+    constructor(public readonly note: Note) {}
 
     circleProperties(note: Note) {
         const position = Number(note.pitch) % 4;
@@ -80,17 +69,13 @@ class ProcessNote implements Action {
     apply(s: State): State {
         const [cx, style] = this.circleProperties(this.note);
         if (!this.note.user_played) {
+            // console.log("ProcessNote !user_played", s.playNotes);
             return {
                 ...s,
                 playNotes: [this.note],
             };
         } else {
-            // console.log("Last Note", this.lastNote);
-            // if (this.lastNote) {
-            //     console.log("Last", s.renderCircles);
-            // }
             const circle = {
-                // id: this.lastNote ? Infinity : Number(s.circleCount),
                 id: Number(s.circleCount),
                 r: Constants.RADIUS,
                 cx,
@@ -99,11 +84,12 @@ class ProcessNote implements Action {
                 class: Constants.CIRCLE_CLASS,
                 note: this.note,
             };
+            console.log("ProcessNote user_played", s.playNotes, this.note);
             return {
                 ...s,
                 renderCircles: s.renderCircles.concat(circle),
                 circleCount: s.circleCount + 1,
-                playNotes: [],
+                // playNotes: [],
             };
         }
     }
@@ -119,35 +105,42 @@ class PressKey implements Action {
         console.log("Render Circles", renderCircles);
         if (collidedCircles.length === 0) {
             console.log("No collision detected", collidedCircles);
+            const randomNote = generateRandomNote(s.time);
             // No collision detected, generate a random note
 
             // const randomNote = getRandomNote();
             // playRandom(randomNote, Constants.SAMPLES);
             // console.log("Random Note", randomNote);
+            console.log("PressKey no collide", s.playNotes);
+
             return {
                 ...s,
-                removeCircles: [],
-                score: s.score,
-                multiplier: 1,
-                // combo: 0,
+                // removeCircles: [],
+                // score: s.score,
+                // // multiplier: 1,
+                // // combo: 0,
+                playNotes: [randomNote],
                 wrongNote: true,
+                multiplier: 1,
+                combo: 0,
             };
         } else {
             console.log("Collision detected", collidedCircles);
             const playNotes = collidedCircles.map((circle) => circle.note);
             const newCombo = s.combo + collidedCircles.length;
             const newMultiplier = 1 + Math.floor(newCombo / 10) * 0.2;
+            console.log("PressKey collide", playNotes);
             return {
                 ...s,
                 renderCircles,
                 removeCircles: collidedCircles,
-                playNotes,
+                playNotes: playNotes,
                 score: Math.round(
                     s.score + collidedCircles.length * newMultiplier,
                 ),
                 multiplier: newMultiplier,
                 combo: newCombo,
-                // wrongNote: false,
+                wrongNote: false,
             };
         }
     }
@@ -176,6 +169,35 @@ class PressKey implements Action {
     };
 }
 
+// class PressWrong implements Action {
+//     constructor(public readonly seed: number) {}
+
+//     apply(s: State): State {
+//         return s.wrongNote
+//             ? {
+//                   ...s,
+//                   playNotes: [generateRandomNote(this.seed)],
+//                   wrongNote: false, // Reset wrongNote after playing the random note
+//               }
+//             : s;
+//     }
+// }
+
+class PressWrong implements Action {
+    constructor(public readonly randomNote: Note) {}
+
+    apply(s: State): State {
+        if (s.wrongNote) {
+            return {
+                ...s,
+                playNotes: [...s.playNotes, this.randomNote],
+                wrongNote: false, // Reset wrongNote after playing the random note
+            };
+        }
+        return s;
+    }
+}
+
 class End implements Action {
     apply(s: State): State {
         return {
@@ -185,4 +207,4 @@ class End implements Action {
     }
 }
 
-export { Tick, ProcessNote, PressKey, End };
+export { Tick, ProcessNote, PressKey, PressWrong, End };

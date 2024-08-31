@@ -10,6 +10,7 @@ interface Action {
 
 type State = Readonly<{
     gameEnd: boolean;
+    time: number;
     renderCircles: ReadonlyArray<Circle>;
     removeCircles: ReadonlyArray<Circle>;
     playNotes: ReadonlyArray<Note>;

@@ -14,7 +14,7 @@
 
 import "./style.css";
 
-import { fromEvent, interval, merge, from, of } from "rxjs";
+import { fromEvent, interval, merge, from, of, zip } from "rxjs";
 import {
     map,
     filter,
@@ -23,13 +23,29 @@ import {
     mergeMap,
     delay,
     endWith,
+    tap,
+    switchMap,
+    concatMap,
+    withLatestFrom,
 } from "rxjs/operators";
 import * as Tone from "tone";
 import { SampleLibrary } from "./tonejs-instruments";
 
 import { Key, Event, State, Note, Circle } from "./types";
-import { initialState, Tick, ProcessNote, PressKey, End } from "./state";
-import { Constants, reduceState } from "./util";
+import {
+    initialState,
+    Tick,
+    ProcessNote,
+    PressKey,
+    End,
+    PressWrong,
+} from "./state";
+import {
+    Constants,
+    createRngStreamFromSource,
+    playRandom,
+    reduceState,
+} from "./util";
 import { updateView } from "./view";
 
 /**
@@ -39,43 +55,6 @@ import { updateView } from "./view";
  * @returns Updated state
  */
 const tick = (s: State) => s;
-
-// /**
-//  * Displays a SVG element on the canvas. Brings to foreground.
-//  * @param elem SVG element to display
-//  */
-// const show = (elem: SVGGraphicsElement) => {
-//     elem.setAttribute("visibility", "visible");
-//     elem.parentNode!.appendChild(elem);
-// };
-
-// /**
-//  * Hides a SVG element on the canvas.
-//  * @param elem SVG element to hide
-//  */
-// const hide = (elem: SVGGraphicsElement) =>
-//     elem.setAttribute("visibility", "hidden");
-
-// /**
-//  * Creates an SVG element with the given properties.
-//  *
-//  * See https://developer.mozilla.org/en-US/docs/Web/SVG/Element for valid
-//  * element names and properties.
-//  *
-//  * @param namespace Namespace of the SVG element
-//  * @param name SVGElement name
-//  * @param props Properties to set on the SVG element
-//  * @returns SVG element
-//  */
-// const createSvgElement = (
-//     namespace: string | null,
-//     name: string,
-//     props: Record<string, string> = {},
-// ) => {
-//     const elem = document.createElementNS(namespace, name) as SVGElement;
-//     Object.entries(props).forEach(([k, v]) => elem.setAttribute(k, v));
-//     return elem;
-// };
 
 /**
  * This is the function called on page load. Your main game loop
@@ -127,12 +106,64 @@ export function main(
         endWith(new End()),
     );
 
-    const keyH$ = fromKey("KeyH").pipe(map((event) => new PressKey(event)));
-    const keyJ$ = fromKey("KeyJ").pipe(map((event) => new PressKey(event)));
-    const keyK$ = fromKey("KeyK").pipe(map((event) => new PressKey(event)));
-    const keyL$ = fromKey("KeyL").pipe(map((event) => new PressKey(event)));
+    const playKeys: Key[] = ["KeyH", "KeyJ", "KeyK", "KeyL"];
 
-    const source$ = merge(tick$, notes$, keyH$, keyJ$, keyK$, keyL$)
+    // const playKeys$ = playKeys.map((key) =>
+    //     fromKey(key).pipe(
+    //         concatMap((event) => [
+    //             new PressKey(event),
+    //             new PressWrong(Constants.SEED),
+    //         ]),
+    //     ),
+    // );
+
+    const playKeys$ = playKeys.map((key) =>
+        fromKey(key).pipe(map((event) => new PressKey(event))),
+    );
+
+    const randomNoteStream$ = createRngStreamFromSource(interval(100))(
+        Constants.SEED,
+    );
+
+    // const playKeys$ = playKeys.map((key) =>
+    //     fromKey(key).pipe(
+    //         concatMap((event) => of(new PressKey(event))),
+    //         withLatestFrom(randomNoteStream$),
+    //         mergeMap(([pressKeyAction, randomNote]) => [
+    //             pressKeyAction,
+    //             new PressWrong(randomNote),
+    //         ]),
+    //     ),
+    // );
+
+    // const randomNote$ = createRngStreamFromSource(interval(100))(
+    //     Date.now(),
+    // ).pipe(map((note) => new PressWrong(Constants.SEED)));
+
+    // const randomNote = createRngStreamFromSource(tick$);
+
+    // // Handle wrong notes by playing a random note
+    // // const handleWrongNotes$ = randomNote$.pipe(
+    // //     tap((randomNote) => playRandom(randomNote, samples)),
+    // // );
+
+    // const source$ = merge(tick$, notes$, ...keyObservables$)
+    //     .pipe(
+    //         scan(reduceState, initialState),
+    //         switchMap((s: State) => {
+    //             if (s.wrongNote) {
+    //                 console.log("Wrong Note", s);
+    //                 return handleWrongNotes$.pipe(map(() => s));
+    //             }
+    //             return of(s);
+    //         }),
+    //     )
+    //     .subscribe((s: State) => {
+    //         console.log(s);
+    //         updateView(s, samples);
+    //     });
+
+    const source$ = merge(tick$, notes$, ...playKeys$)
         .pipe(scan(reduceState, initialState))
         .subscribe((s: State) => {
             console.log(s);

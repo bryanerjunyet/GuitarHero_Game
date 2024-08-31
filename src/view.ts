@@ -102,6 +102,7 @@ const updateView = (s: State, samples: { [key: string]: Tone.Sampler }) => {
     };
 
     const play = (playNotes: ReadonlyArray<Note>) => {
+        console.log("play", playNotes);
         playNotes.forEach((note) => {
             samples[note.instrument_name].triggerAttackRelease(
                 Tone.Frequency(note.pitch, "midi").toNote(),
@@ -112,70 +113,13 @@ const updateView = (s: State, samples: { [key: string]: Tone.Sampler }) => {
         });
     };
 
-    // const resetCanvas = () => {
-    //     svg.querySelectorAll("[class=shadow]").forEach((note) =>
-    //         svg.removeChild(note),
-    //     );
-    // };
-
-    // const miss = (renderCircles: ReadonlyArray<Circle>) => {
-    //     const miss = renderCircles.filter(
-    //         (circle) => Number(circle.cy) === Viewport.CANVAS_HEIGHT,
-    //     );
-    //     return miss.length;
-    // };
-
-    // const missing = miss(s.renderCircles);
-
-    // if (s.wrongPress) {
+    // if (s.wrongNote) {
     //     playRandom(getRandomNote(), samples);
     // }
-    // render(s.renderCircles, svg);
-    // play(s.playNotes);
-    // playRandom(s.wrongNote, samples);
-    // remove(s.removeCircles);
-
-    // Play the random note if wrongPress is true
-    // console.log("Wrong before", s);
-    // console.log("Wrong before", s.wrongNote);
-    if (s.wrongNote) {
-        playRandom(getRandomNote(), samples);
-    }
-    // console.log("Wrong inside", s);
-
-    // Use RxJS timer to reset the wrongPress state after a delay
-    // timer(500).pipe(
-    // map(() => {
-    // Reset the wrongPress state after 500ms
-    // s = {
-    //     ...s,
-    //     wrongNote: false,
-    // };
-    // }
-    // console.log("Wrong after", s);
-    // console.log("Wrong after", s.wrongNote);
 
     render(s.renderCircles, svg);
     play(s.playNotes);
     remove(s.removeCircles);
-
-    // const reset = fromEvent<MouseEvent>(resetButton, "click");
-    // reset.subscribe(() => {
-    //     //unsubscribe current dot observable
-    //     source$.unsubscribe();
-    //     //reset dots on canvas
-    //     resetCanvas();
-    //     //reset approximation result
-    //     resultInPage.textContent = String(0);
-    //     //restart pi approximation
-    //     piApproximation();
-    // });
-    // ).subscribe();
-    // } else {
-    //     render(s.renderCircles, svg);
-    //     play(s.playNotes);
-    //     remove(s.removeCircles);
-    // }
 
     multiplier.textContent = String(s.multiplier);
     scoreText.textContent = String(s.score);
