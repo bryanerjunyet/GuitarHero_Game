@@ -1,6 +1,5 @@
-import { fromEvent, map, timer } from "rxjs";
 import { Circle, Note, State } from "./types";
-import { getRandomNote, playRandom, Viewport } from "./util";
+import { Viewport } from "./util";
 import * as Tone from "tone";
 
 const updateView = (s: State, samples: { [key: string]: Tone.Sampler }) => {
@@ -21,7 +20,6 @@ const updateView = (s: State, samples: { [key: string]: Tone.Sampler }) => {
     // Text fields
     const multiplier = document.querySelector("#multiplierText") as HTMLElement;
     const scoreText = document.querySelector("#scoreText") as HTMLElement;
-    const missText = document.querySelector("#missText") as HTMLElement;
     const highScoreText = document.querySelector(
         "#highScoreText",
     ) as HTMLElement;
@@ -68,17 +66,17 @@ const updateView = (s: State, samples: { [key: string]: Tone.Sampler }) => {
      *
      * In MVC terms, this updates the View using the Model.
      */
-    const render = (
-        renderCircles: ReadonlyArray<Circle>,
+    const display = (
+        movingCircles: ReadonlyArray<Circle>,
         svg: SVGGraphicsElement,
     ) => {
         // Add blocks to the main grid canvas
-        const createElement = (circle: Circle) => {
+        const addCircles = (circle: Circle) => {
             const circleElement = createSvgElement(svg.namespaceURI, "circle", {
                 id: String(circle.id),
-                r: circle.r,
-                cx: circle.cx,
-                cy: circle.cy,
+                r: circle.radius,
+                cx: circle.xCoordinate,
+                cy: circle.yCoordinate,
                 style: circle.style,
                 class: circle.class,
             });
@@ -86,23 +84,15 @@ const updateView = (s: State, samples: { [key: string]: Tone.Sampler }) => {
             return circleElement;
         };
 
-        renderCircles.forEach((circle) => {
+        movingCircles.forEach((circle) => {
             const circleElement =
                 document.getElementById(String(circle.id)) ||
-                createElement(circle);
-            circleElement.setAttribute("cy", circle.cy);
-        });
-    };
-
-    const remove = (removeCircles: ReadonlyArray<Circle>) => {
-        removeCircles.forEach((circle) => {
-            const circleElement = document.getElementById(String(circle.id))!;
-            svg.removeChild(circleElement);
+                addCircles(circle);
+            circleElement.setAttribute("cy", circle.yCoordinate);
         });
     };
 
     const play = (playNotes: ReadonlyArray<Note>) => {
-        console.log("play", playNotes);
         playNotes.forEach((note) => {
             samples[note.instrument_name].triggerAttackRelease(
                 Tone.Frequency(note.pitch, "midi").toNote(),
@@ -113,18 +103,20 @@ const updateView = (s: State, samples: { [key: string]: Tone.Sampler }) => {
         });
     };
 
-    // if (s.wrongNote) {
-    //     playRandom(getRandomNote(), samples);
-    // }
+    const remove = (removeCircles: ReadonlyArray<Circle>) => {
+        removeCircles.forEach((circle) => {
+            const circleElement = document.getElementById(String(circle.id))!;
+            svg.removeChild(circleElement);
+        });
+    };
 
-    render(s.renderCircles, svg);
+    display(s.movingCircles, svg);
     play(s.playNotes);
     remove(s.removeCircles);
 
     multiplier.textContent = String(s.multiplier);
     scoreText.textContent = String(s.score);
-    missText.textContent = String(s.miss);
-    s.gameEnd && s.renderCircles.length === 0 ? show(gameover) : hide(gameover);
+    s.gameEnd && s.movingCircles.length === 0 ? show(gameover) : hide(gameover);
 };
 
 export { updateView };

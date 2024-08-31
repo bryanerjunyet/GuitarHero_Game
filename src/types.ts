@@ -1,25 +1,19 @@
 /** User input */
-
 type Key = "KeyH" | "KeyJ" | "KeyK" | "KeyL";
 
 type Event = "keydown" | "keyup" | "keypress";
 
-interface Action {
-    apply(s: State): State;
-}
-
 type State = Readonly<{
     gameEnd: boolean;
     time: number;
-    renderCircles: ReadonlyArray<Circle>;
-    removeCircles: ReadonlyArray<Circle>;
     playNotes: ReadonlyArray<Note>;
+    movingCircles: ReadonlyArray<Circle>;
+    removeCircles: ReadonlyArray<Circle>;
     circleCount: number;
-    score: number;
     multiplier: number;
     combo: number;
+    score: number;
     miss: number;
-    wrongNote: boolean;
 }>;
 
 type Note = Readonly<{
@@ -33,12 +27,16 @@ type Note = Readonly<{
 
 type Circle = Readonly<{
     id: number;
-    r: string;
-    cx: string;
-    cy: string;
+    radius: string;
+    xCoordinate: string;
+    yCoordinate: string;
     style: string;
     class: "shadow";
     note: Note;
 }>;
+
+interface Action {
+    apply(s: State): State;
+}
 
 export type { Key, Event, Action, State, Note, Circle };

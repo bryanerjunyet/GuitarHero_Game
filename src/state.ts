@@ -1,200 +1,133 @@
-import { Key, Event, Action, State, Note, Circle } from "./types";
-import { generateRandomNote, getRandomNote, not, playRandom } from "./util";
-import { Constants } from "./util";
+import { Action, State, Note, Circle } from "./types";
+import { getRandomNote, not, PlayKeys } from "./util";
+import { Property } from "./util";
 
 /** State processing */
 
 export const initialState: State = {
     gameEnd: false,
     time: 0,
-    renderCircles: [],
-    removeCircles: [],
     playNotes: [],
+    movingCircles: [],
+    removeCircles: [],
     circleCount: 0,
-    score: 0,
     multiplier: 1,
     combo: 0,
+    score: 0,
     miss: 0,
-    wrongNote: false,
 } as const;
 
 class Tick implements Action {
     constructor(public readonly tick: number) {}
 
+    moveCircle(circle: Circle) {
+        return {
+            ...circle,
+            yCoordinate: String(Number(circle.yCoordinate) + 2),
+        };
+    }
+
     apply(s: State): State {
-        console.log("Tick", this);
-        const expired = (circle: Circle) => Number(circle.cy) > 400;
-        const removeCircles = s.renderCircles.filter(expired);
-        const renderCircles = s.renderCircles
+        const expired = (circle: Circle) => Number(circle.yCoordinate) > 400;
+        const movingCircles = s.movingCircles
             .filter(not(expired))
             .map(this.moveCircle);
+        const removeCircles = s.movingCircles.filter(expired);
         const missCircles = removeCircles.length;
         return {
             ...s,
             time: this.tick,
-            renderCircles,
-            removeCircles,
             playNotes: [],
-            miss: s.miss + missCircles,
+            movingCircles: movingCircles,
+            removeCircles: removeCircles,
             multiplier: missCircles > 0 ? 1 : s.multiplier,
             combo: missCircles > 0 ? 0 : s.combo,
-            wrongNote: missCircles > 0 ? true : false,
+            miss: s.miss + missCircles,
         };
-    }
-
-    moveCircle(circle: Circle) {
-        return {
-            ...circle,
-            cy: String(Number(circle.cy) + 2),
-        };
-    }
-}
-
-class ProcessNote implements Action {
-    constructor(public readonly note: Note) {}
-
-    circleProperties(note: Note) {
-        const position = Number(note.pitch) % 4;
-        if (position === 0) {
-            return Constants.GREEN_CX;
-        } else if (position === 1) {
-            return Constants.RED_CX;
-        } else if (position === 2) {
-            return Constants.BLUE_CX;
-        } else {
-            return Constants.YELLOW_CX;
-        }
-    }
-
-    apply(s: State): State {
-        const [cx, style] = this.circleProperties(this.note);
-        if (!this.note.user_played) {
-            // console.log("ProcessNote !user_played", s.playNotes);
-            return {
-                ...s,
-                playNotes: [this.note],
-            };
-        } else {
-            const circle = {
-                id: Number(s.circleCount),
-                r: Constants.RADIUS,
-                cx,
-                cy: "0",
-                style,
-                class: Constants.CIRCLE_CLASS,
-                note: this.note,
-            };
-            console.log("ProcessNote user_played", s.playNotes, this.note);
-            return {
-                ...s,
-                renderCircles: s.renderCircles.concat(circle),
-                circleCount: s.circleCount + 1,
-                // playNotes: [],
-            };
-        }
     }
 }
 
 class PressKey implements Action {
     constructor(public readonly event: KeyboardEvent) {}
 
-    apply(s: State): State {
-        const collidedCircles = s.renderCircles.filter(this.circleCollision);
-        const renderCircles = s.renderCircles.filter(not(this.circleCollision));
-
-        console.log("Render Circles", renderCircles);
-        if (collidedCircles.length === 0) {
-            console.log("No collision detected", collidedCircles);
-            const randomNote = generateRandomNote(s.time);
-            // No collision detected, generate a random note
-
-            // const randomNote = getRandomNote();
-            // playRandom(randomNote, Constants.SAMPLES);
-            // console.log("Random Note", randomNote);
-            console.log("PressKey no collide", s.playNotes);
-
-            return {
-                ...s,
-                // removeCircles: [],
-                // score: s.score,
-                // // multiplier: 1,
-                // // combo: 0,
-                playNotes: [randomNote],
-                wrongNote: true,
-                multiplier: 1,
-                combo: 0,
-            };
-        } else {
-            console.log("Collision detected", collidedCircles);
-            const playNotes = collidedCircles.map((circle) => circle.note);
-            const newCombo = s.combo + collidedCircles.length;
-            const newMultiplier = 1 + Math.floor(newCombo / 10) * 0.2;
-            console.log("PressKey collide", playNotes);
-            return {
-                ...s,
-                renderCircles,
-                removeCircles: collidedCircles,
-                playNotes: playNotes,
-                score: Math.round(
-                    s.score + collidedCircles.length * newMultiplier,
-                ),
-                multiplier: newMultiplier,
-                combo: newCombo,
-                wrongNote: false,
-            };
-        }
+    getBasePoint(event: KeyboardEvent): [string, string] {
+        return event.code === PlayKeys.PLAY_KEYS[0]
+            ? [Property.GREEN_POINT[0], Property.BASE_POINT]
+            : event.code === PlayKeys.PLAY_KEYS[1]
+              ? [Property.RED_POINT[0], Property.BASE_POINT]
+              : event.code === PlayKeys.PLAY_KEYS[2]
+                ? [Property.BLUE_POINT[0], Property.BASE_POINT]
+                : [Property.YELLOW_POINT[0], Property.BASE_POINT];
     }
 
-    getStaticXandY(event: KeyboardEvent): [string, string] {
-        const staticY = Constants.CY;
-        if (event.code === "KeyH") {
-            return [Constants.GREEN_CX[0], staticY];
-        } else if (event.code === "KeyJ") {
-            return [Constants.RED_CX[0], staticY];
-        } else if (event.code === "KeyK") {
-            return [Constants.BLUE_CX[0], staticY];
-        } else {
-            return [Constants.YELLOW_CX[0], staticY];
-        }
-    }
-
-    circleCollision = (circle: Circle): boolean => {
-        const [staticX, staticY] = this.getStaticXandY(this.event);
-        if (staticX === circle.cx) {
-            const distanceY = Number(staticY) - Number(circle.cy);
-            return Math.abs(distanceY) < Number(Constants.RADIUS);
-        } else {
-            return false;
-        }
+    hitBasePoint = (circle: Circle): boolean => {
+        const xBasePoint = this.getBasePoint(this.event)[0];
+        const yBasePoint = this.getBasePoint(this.event)[1];
+        return xBasePoint === circle.xCoordinate
+            ? Math.abs(Number(yBasePoint) - Number(circle.yCoordinate)) <
+                  Number(Property.RADIUS)
+            : false;
     };
+
+    apply(s: State): State {
+        const movingCircles = s.movingCircles.filter(not(this.hitBasePoint));
+        const hitCircles = s.movingCircles.filter(this.hitBasePoint);
+        const multiplier =
+            1 + Math.floor((s.combo + hitCircles.length) / 10) * 0.2;
+        return hitCircles.length > 0
+            ? {
+                  ...s,
+                  playNotes: hitCircles.map((circle) => circle.note),
+                  movingCircles: movingCircles,
+                  removeCircles: hitCircles,
+                  multiplier: multiplier,
+                  combo: s.combo + hitCircles.length,
+                  score: Math.round(s.score + hitCircles.length * multiplier),
+              }
+            : {
+                  ...s,
+                  playNotes: [getRandomNote(s.time)],
+                  multiplier: 1,
+                  combo: 0,
+              };
+    }
 }
 
-// class PressWrong implements Action {
-//     constructor(public readonly seed: number) {}
+class PlayNote implements Action {
+    constructor(public readonly note: Note) {}
 
-//     apply(s: State): State {
-//         return s.wrongNote
-//             ? {
-//                   ...s,
-//                   playNotes: [generateRandomNote(this.seed)],
-//                   wrongNote: false, // Reset wrongNote after playing the random note
-//               }
-//             : s;
-//     }
-// }
-
-class PressWrong implements Action {
-    constructor(public readonly randomNote: Note) {}
+    circleInfo(note: Note) {
+        const column = Number(note.pitch) % 4;
+        return column === 0
+            ? Property.GREEN_POINT
+            : column === 1
+              ? Property.RED_POINT
+              : column === 2
+                ? Property.BLUE_POINT
+                : Property.YELLOW_POINT;
+    }
 
     apply(s: State): State {
-        if (s.wrongNote) {
-            return {
-                ...s,
-                playNotes: [...s.playNotes, this.randomNote],
-                wrongNote: false, // Reset wrongNote after playing the random note
-            };
-        }
-        return s;
+        const xCoordinate = this.circleInfo(this.note)[0];
+        const style = this.circleInfo(this.note)[1];
+        return this.note.user_played
+            ? {
+                  ...s,
+                  movingCircles: s.movingCircles.concat({
+                      id: s.circleCount,
+                      radius: Property.RADIUS,
+                      xCoordinate: xCoordinate,
+                      yCoordinate: "0",
+                      style: style,
+                      class: Property.CIRCLE_CLASS,
+                      note: this.note,
+                  }),
+                  circleCount: s.circleCount + 1,
+              }
+            : {
+                  ...s,
+                  playNotes: [this.note],
+              };
     }
 }
 
@@ -207,4 +140,4 @@ class End implements Action {
     }
 }
 
-export { Tick, ProcessNote, PressKey, PressWrong, End };
+export { Tick, PlayNote, PressKey, End };

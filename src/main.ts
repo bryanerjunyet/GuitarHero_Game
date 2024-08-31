@@ -14,7 +14,7 @@
 
 import "./style.css";
 
-import { fromEvent, interval, merge, from, of, zip } from "rxjs";
+import { fromEvent, interval, merge, from, of } from "rxjs";
 import {
     map,
     filter,
@@ -23,38 +23,14 @@ import {
     mergeMap,
     delay,
     endWith,
-    tap,
-    switchMap,
-    concatMap,
-    withLatestFrom,
 } from "rxjs/operators";
 import * as Tone from "tone";
 import { SampleLibrary } from "./tonejs-instruments";
 
-import { Key, Event, State, Note, Circle } from "./types";
-import {
-    initialState,
-    Tick,
-    ProcessNote,
-    PressKey,
-    End,
-    PressWrong,
-} from "./state";
-import {
-    Constants,
-    createRngStreamFromSource,
-    playRandom,
-    reduceState,
-} from "./util";
+import { Key, State } from "./types";
+import { initialState, Tick, PlayNote, PressKey, End } from "./state";
+import { PlayKeys, Song, reduceState } from "./util";
 import { updateView } from "./view";
-
-/**
- * Updates the state by proceeding with one time step.
- *
- * @param s Current state
- * @returns Updated state
- */
-const tick = (s: State) => s;
 
 /**
  * This is the function called on page load. Your main game loop
@@ -97,71 +73,20 @@ export function main(
     };
 
     /** Determines the rate of time steps */
-    const tick$ = interval(Constants.TICK_RATE_MS).pipe(
+    const tick$ = interval(Song.TICK_RATE_MS).pipe(
         map((tick) => new Tick(tick)),
     );
 
     const notes$ = readCSV(csvContents).pipe(
-        map((note) => new ProcessNote(note)),
+        map((note) => new PlayNote(note)),
         endWith(new End()),
     );
 
-    const playKeys: Key[] = ["KeyH", "KeyJ", "KeyK", "KeyL"];
-
-    // const playKeys$ = playKeys.map((key) =>
-    //     fromKey(key).pipe(
-    //         concatMap((event) => [
-    //             new PressKey(event),
-    //             new PressWrong(Constants.SEED),
-    //         ]),
-    //     ),
-    // );
+    const playKeys = PlayKeys.PLAY_KEYS;
 
     const playKeys$ = playKeys.map((key) =>
         fromKey(key).pipe(map((event) => new PressKey(event))),
     );
-
-    const randomNoteStream$ = createRngStreamFromSource(interval(100))(
-        Constants.SEED,
-    );
-
-    // const playKeys$ = playKeys.map((key) =>
-    //     fromKey(key).pipe(
-    //         concatMap((event) => of(new PressKey(event))),
-    //         withLatestFrom(randomNoteStream$),
-    //         mergeMap(([pressKeyAction, randomNote]) => [
-    //             pressKeyAction,
-    //             new PressWrong(randomNote),
-    //         ]),
-    //     ),
-    // );
-
-    // const randomNote$ = createRngStreamFromSource(interval(100))(
-    //     Date.now(),
-    // ).pipe(map((note) => new PressWrong(Constants.SEED)));
-
-    // const randomNote = createRngStreamFromSource(tick$);
-
-    // // Handle wrong notes by playing a random note
-    // // const handleWrongNotes$ = randomNote$.pipe(
-    // //     tap((randomNote) => playRandom(randomNote, samples)),
-    // // );
-
-    // const source$ = merge(tick$, notes$, ...keyObservables$)
-    //     .pipe(
-    //         scan(reduceState, initialState),
-    //         switchMap((s: State) => {
-    //             if (s.wrongNote) {
-    //                 console.log("Wrong Note", s);
-    //                 return handleWrongNotes$.pipe(map(() => s));
-    //             }
-    //             return of(s);
-    //         }),
-    //     )
-    //     .subscribe((s: State) => {
-    //         console.log(s);
-    //         updateView(s, samples);
-    //     });
 
     const source$ = merge(tick$, notes$, ...playKeys$)
         .pipe(scan(reduceState, initialState))
@@ -207,7 +132,7 @@ if (typeof window !== "undefined") {
             samples[instrument].release = 0.5;
         }
 
-        fetch(`${baseUrl}/assets/${Constants.SONG_NAME}.csv`)
+        fetch(`${baseUrl}/assets/${Song.SONG_NAME}.csv`)
             .then((response) => response.text())
             .then((text) => startGame(text))
             .catch((error) =>
