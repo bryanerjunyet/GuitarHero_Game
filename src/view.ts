@@ -1,28 +1,86 @@
+/**
+ * This view.ts file handles rendering the visual elements of the Guitar Hero game by updating the SVG canvas
+ * based on the current state of the game. It interacts with the DOM to display moving circles,
+ * plays the corresponding notes, updates the score, and handles the game over screen.
+ * The updateView function serves as the primary method to refresh the game's visual state
+ * by leveraging the data in the State object and Tone.js for sound playback.
+ */
 import { Circle, Note, State } from "./types";
 import { Viewport } from "./util";
 import * as Tone from "tone";
 
+/**
+ * Updates the visual representation of the game based on the current state.
+ * It updates the SVG canvas, plays notes, removes circles, and manages the
+ * game over display.
+ *
+ * @param s - The current state of the game.
+ * @param samples - A collection of Tone.js samplers to play notes.
+ */
 const updateView = (s: State, samples: { [key: string]: Tone.Sampler }) => {
-    // Canvas elements
+    ////////////////////// Canvas Elements //////////////////////
+
+    /**
+     * The main SVG canvas where the game circles are displayed.
+     * @type {SVGGraphicsElement & HTMLElement}
+     */
     const svg = document.querySelector("#svgCanvas") as SVGGraphicsElement &
         HTMLElement;
+
+    /**
+     * A secondary SVG element for previewing content (currently not modified).
+     * @type {SVGGraphicsElement & HTMLElement}
+     */
     const preview = document.querySelector(
         "#svgPreview",
     ) as SVGGraphicsElement & HTMLElement;
+
+    /**
+     * The game over SVG element which is displayed when the game ends.
+     * @type {SVGGraphicsElement & HTMLElement}
+     */
     const gameover = document.querySelector("#gameOver") as SVGGraphicsElement &
         HTMLElement;
+
+    /**
+     * The main container element of the game.
+     * @type {HTMLElement}
+     */
     const container = document.querySelector("#main") as HTMLElement;
+
+    /**
+     * The reset button element that allows the player to restart the game.
+     * @type {HTMLElement}
+     */
     const resetButton = document.getElementById("resetButton")!;
 
+    //set SVG canvas size
     svg.setAttribute("height", `${Viewport.CANVAS_HEIGHT}`);
     svg.setAttribute("width", `${Viewport.CANVAS_WIDTH}`);
 
-    // Text fields
+    ////////////////////// Text Fields //////////////////////
+
+    /**
+     * Element displaying the current score multiplier.
+     * @type {HTMLElement}
+     */
     const multiplier = document.querySelector("#multiplierText") as HTMLElement;
+
+    /**
+     * Element displaying the player's current score.
+     * @type {HTMLElement}
+     */
     const scoreText = document.querySelector("#scoreText") as HTMLElement;
+
+    /**
+     * Element displaying the highest score.
+     * @type {HTMLElement}
+     */
     const highScoreText = document.querySelector(
         "#highScoreText",
     ) as HTMLElement;
+
+    ////////////////////// View Functions //////////////////////
 
     /**
      * Creates an SVG element with the given properties.
@@ -62,15 +120,21 @@ const updateView = (s: State, samples: { [key: string]: Tone.Sampler }) => {
         elem.setAttribute("visibility", "hidden");
 
     /**
-     * Renders the current state to the canvas.
+     * Display the current state of the moving circles on the SVG canvas.
      *
-     * In MVC terms, this updates the View using the Model.
+     * @param movingCircles - An array of circles to be displayed on the canvas.
+     * @param svg - The main SVG canvas element.
      */
     const display = (
         movingCircles: ReadonlyArray<Circle>,
         svg: SVGGraphicsElement,
     ) => {
-        // Add blocks to the main grid canvas
+        /**
+         * Adds a circle SVG element to the main canvas.
+         *
+         * @param circle - The circle object representing the circle to be drawn.
+         * @returns The created circle SVG element.
+         */
         const addCircles = (circle: Circle) => {
             const circleElement = createSvgElement(svg.namespaceURI, "circle", {
                 id: String(circle.id),
@@ -80,20 +144,30 @@ const updateView = (s: State, samples: { [key: string]: Tone.Sampler }) => {
                 style: circle.style,
                 class: circle.class,
             });
+            //add new circle element to the SVG canvas
             svg.appendChild(circleElement);
             return circleElement;
         };
 
+        //update or add circles for each moving circle in the state
         movingCircles.forEach((circle) => {
+            //find the existing circle element or create a new one
             const circleElement =
                 document.getElementById(String(circle.id)) ||
                 addCircles(circle);
+            //update the new circle position
             circleElement.setAttribute("cy", circle.yCoordinate);
         });
     };
 
+    /**
+     * Plays the musical notes corresponding to the notes in the state.
+     *
+     * @param playNotes - An array of notes to be played.
+     */
     const play = (playNotes: ReadonlyArray<Note>) => {
         playNotes.forEach((note) => {
+            //triggers the corresponding sampler to play the note
             samples[note.instrument_name].triggerAttackRelease(
                 Tone.Frequency(note.pitch, "midi").toNote(),
                 note.end - note.start,
@@ -103,6 +177,11 @@ const updateView = (s: State, samples: { [key: string]: Tone.Sampler }) => {
         });
     };
 
+    /**
+     * Removes circles from the canvas that are no longer present in the state.
+     *
+     * @param removeCircles - An array of circles to be removed from the canvas.
+     */
     const remove = (removeCircles: ReadonlyArray<Circle>) => {
         removeCircles.forEach((circle) => {
             const circleElement = document.getElementById(String(circle.id))!;
@@ -110,9 +189,13 @@ const updateView = (s: State, samples: { [key: string]: Tone.Sampler }) => {
         });
     };
 
+    ////////////////////// Update View //////////////////////
+
     display(s.movingCircles, svg);
     play(s.playNotes);
     remove(s.removeCircles);
+
+    ////////////////////// Update Text Fields //////////////////////
 
     multiplier.textContent = String(s.multiplier);
     scoreText.textContent = String(s.score);
