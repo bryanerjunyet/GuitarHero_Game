@@ -48,7 +48,7 @@ const Property = {
  * This includes the song name and the tick rate (the interval at which the game updates).
  */
 const Song = {
-    SONG_NAME: "RockinRobin",
+    SONG_NAME: "luciddream",
     TICK_RATE_MS: 10,
 } as const;
 
