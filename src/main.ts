@@ -46,20 +46,6 @@ export function main(
     samples: { [key: string]: Tone.Sampler },
 ) {
     /**
-     * Observable of key presses
-     */
-    const key$ = fromEvent<KeyboardEvent>(document, "keypress");
-
-    /**
-     * Filters keyboard events to those matching a specific key code.
-     *
-     * @param {Key} keyCode - The code of the key to filter for.
-     * @returns {Observable<KeyboardEvent>} - An observable that emits events when the specified key is pressed.
-     */
-    const fromKey = (keyCode: Key) =>
-        key$.pipe(filter(({ code }) => code === keyCode));
-
-    /**
      * Parses the CSV file content into individual notes and emits them as observables.
      *
      * @param {string} csvContents - The contents of the CSV file as a string.
@@ -102,6 +88,28 @@ export function main(
     );
 
     /**
+     * Observable of key presses
+     */
+    const key$ = fromEvent<KeyboardEvent>(document, "keypress");
+
+    /**
+     * Filters keyboard events to those matching a specific key code.
+     *
+     * @param {Key} keyCode - The code of the key to filter for.
+     * @returns {Observable<KeyboardEvent>} - An observable that emits events when the specified key is pressed.
+     */
+    const fromKey = (keyCode: Key) =>
+        key$.pipe(filter(({ code }) => code === keyCode));
+
+    /**
+     * Array of observables, each emitting a PressKey action when the corresponding key is pressed.
+     */
+    const playKeys$ = PlayKeys.PLAY_KEYS.map((key) =>
+        //each key played result an event action
+        fromKey(key).pipe(map((event) => new PressKey(event))),
+    );
+
+    /**
      * Observable that emits note-playing actions based on the parsed CSV data.
      * It ends with an End action to signify the end of the song.
      */
@@ -110,14 +118,6 @@ export function main(
         map((note) => new PlayNote(note)),
         //last note end to have game over
         endWith(new EndNote()),
-    );
-
-    /**
-     * Array of observables, each emitting a PressKey action when the corresponding key is pressed.
-     */
-    const playKeys$ = PlayKeys.PLAY_KEYS.map((key) =>
-        //each key played result an event action
-        fromKey(key).pipe(map((event) => new PressKey(event))),
     );
 
     /**
